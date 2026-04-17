@@ -1,5 +1,5 @@
 import { Elysia, t } from "elysia";
-import { registerUser, loginUser, getCurrentUser } from "../services/users-services";
+import { registerUser, loginUser, getCurrentUser, logoutUser } from "../services/users-services";
 
 export const usersRoutes = new Elysia({ prefix: "/api" })
     .post("/users", async ({ body, set }) => {
