@@ -57,3 +57,19 @@ export const loginUser = async (payload: any) => {
 
     return token;
 };
+
+export const getCurrentUser = async (token: string) => {
+    const session = await db.query.sessions.findFirst({
+        where: eq(sessions.token, token),
+        with: {
+            user: true
+        }
+    }) as any;
+
+    if (!session || !session.user) {
+        throw new Error("Unauthorized");
+    }
+
+    const { id, name, email, createdAt } = session.user;
+    return { id, name, email, createdAt };
+};
