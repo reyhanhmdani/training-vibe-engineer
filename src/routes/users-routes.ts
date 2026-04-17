@@ -1,5 +1,6 @@
 import { Elysia, t } from "elysia";
-import { registerUser, loginUser, getCurrentUser } from "../services/users-services";
+import { registerUser, loginUser, getCurrentUser, logoutUser } from "../services/users-services";
+import { authMiddleware } from "../middlewares/auth-middleware";
 
 export const usersRoutes = new Elysia({ prefix: "/api" })
     .post("/users", async ({ body, set }) => {
@@ -39,28 +40,32 @@ export const usersRoutes = new Elysia({ prefix: "/api" })
             password: t.String()
         })
     })
-    .get("/users/current", async ({ headers, set }) => {
-        try {
-            const auth = headers.authorization;
-            if (!auth || !auth.startsWith("Bearer ")) {
-                set.status = 401;
-                return { error: "Unauthorized" };
+    .group("/users", app => app
+        .use(authMiddleware)
+        .get("/current", async ({ token, set }) => {
+            try {
+                const user = await getCurrentUser(token!);
+                return { data: user };
+            } catch (error: any) {
+                if (error.message === "Unauthorized") {
+                    set.status = 401;
+                    return { error: error.message };
+                }
+                set.status = 500;
+                return { error: "Internal Server Error" };
             }
-
-            const token = auth.split(" ")[1];
-            if (!token) {
-                set.status = 401;
-                return { error: "Unauthorized" };
+        })
+        .delete("/logout", async ({ token, set }) => {
+            try {
+                const result = await logoutUser(token!);
+                return { data: result };
+            } catch (error: any) {
+                if (error.message === "Unauthorized") {
+                    set.status = 401;
+                    return { error: error.message };
+                }
+                set.status = 500;
+                return { error: "Internal Server Error" };
             }
-
-            const user = await getCurrentUser(token);
-            return { data: user };
-        } catch (error: any) {
-            if (error.message === "Unauthorized") {
-                set.status = 401;
-                return { error: error.message };
-            }
-            set.status = 500;
-            return { error: "Internal Server Error" };
-        }
-    });
+        })
+    );
